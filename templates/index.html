@@ -4,10 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>People List</title>
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
     <script>
         async function fetchPeople() {
             const response = await fetch('/getPeople');
-            const people = await response.json();
+            const people = response.json();
             return people;
         }
 
@@ -90,12 +91,25 @@
         }
 
         document.addEventListener('DOMContentLoaded', async () => {
-            const people = await fetchPeople();
-            renderTable(people);
+            try {
+                const people = await fetchPeople();
+                renderTable(people);
 
-            document.getElementById('addPersonForm').addEventListener('submit', addPerson);
-            document.getElementById('addAttributeButton').addEventListener('click', addAttributeField);
-        });
+                document.getElementById('addPersonForm').addEventListener('submit', addPerson);
+                document.getElementById('addAttributeButton').addEventListener('click', addAttributeField);
+
+                if (typeof io !== 'undefined') {
+                    const socket = io();
+                    socket.on('update_people', (people) => {
+                        renderTable(people);
+                    });
+                } else {
+                    console.error('Socket.io is not loaded.');
+                }
+            } catch (error) {
+                console.error('Error initializing the application:', error);
+            }
+    });
     </script>
 </head>
 <body>
