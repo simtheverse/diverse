@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>People List</title>
+    <script>
+        async function fetchPeople() {
+            const response = await fetch('/getPeople');
+            const people = await response.json();
+            return people;
+        }
+
+        function renderTable(people) {
+            const table = document.getElementById('peopleTable');
+            table.innerHTML = '';
+
+            if (people.length === 0) {
+                table.innerHTML = '<tr><td colspan="100%">No people found</td></tr>';
+                return;
+            }
+
+            const headers = new Set(['name']);
+            people.forEach(person => {
+                Object.keys(person).forEach(key => headers.add(key));
+            });
+
+            const headerRow = document.createElement('tr');
+            headers.forEach(header => {
+                const th = document.createElement('th');
+                th.textContent = header;
+                headerRow.appendChild(th);
+            });
+            table.appendChild(headerRow);
+
+            people.forEach(person => {
+                const row = document.createElement('tr');
+                headers.forEach(header => {
+                    const td = document.createElement('td');
+                    td.textContent = person[header] || '';
+                    row.appendChild(td);
+                });
+                table.appendChild(row);
+            });
+        }
+
+        async function addPerson(event) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            const person = {};
+            formData.forEach((value, key) => {
+                if (key.startsWith('attributeName')) {
+                    const index = key.split('_')[1];
+                    const attributeName = value;
+                    const attributeValue = formData.get(`attributeValue_${index}`);
+                    person[attributeName] = attributeValue;
+                } else if (!key.startsWith('attributeValue')) {
+                    person[key] = value;
+                }
+            });
+
+            await fetch('/addPerson', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(person)
+            });
+
+            const people = await fetchPeople();
+            renderTable(people);
+        }
+
+        function addAttributeField() {
+            const container = document.getElementById('attributesContainer');
+            const index = container.children.length;
+            const div = document.createElement('div');
+            div.innerHTML = `
+                <label for="attributeName_${index}">Attribute Name:</label>
+                <input type="text" name="attributeName_${index}" required>
+                <label for="attributeValue_${index}">Attribute Value:</label>
+                <input type="text" name="attributeValue_${index}" required>
+                <button type="button" onclick="removeAttributeField(this)">Remove</button>
+            `;
+            container.appendChild(div);
+        }
+
+        function removeAttributeField(button) {
+            button.parentElement.remove();
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const people = await fetchPeople();
+            renderTable(people);
+
+            document.getElementById('addPersonForm').addEventListener('submit', addPerson);
+            document.getElementById('addAttributeButton').addEventListener('click', addAttributeField);
+        });
+    </script>
+</head>
+<body>
+    <h1>People List</h1>
+    <form id="addPersonForm">
+        <label for="name">Name:</label>
+        <input type="text" id="name" name="name" required>
+        <div id="attributesContainer"></div>
+        <button type="button" id="addAttributeButton">Add Attribute</button>
+        <button type="submit">Add Person</button>
+    </form>
+    <table id="peopleTable" border="1">
+        <!-- Table content will be dynamically generated -->
+    </table>
+</body>
+</html>
